@@ -1,0 +1,29 @@
+version: '3.7'
+
+services:
+  frontend:
+    container_name: frontend
+    build:
+      context: .
+      dockerfile: Frontend.Dockerfile
+    volumes:
+      - ./client:/deathnote/client/
+      - /deathnote/client/node_modules
+    networks:
+      - deathnote
+    ports:
+      - "3000:3000"
+
+  blockchain:
+    container_name: blockchain
+    build:
+      context: .
+      dockerfile: Blockchain.Dockerfile
+    volumes:
+    - .:/deathnote
+    networks:
+      - deathnote
+    ports:
+      - "8545:8545"
+networks:
+  deathnote:
