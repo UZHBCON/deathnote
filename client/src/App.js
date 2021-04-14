@@ -67,7 +67,7 @@ function App() {
             <h2>Smart Contract Example</h2>
             <button onClick={runExample}>Click me</button>
             <p>
-                Try changing the value stored on <strong>line 40</strong> of App.js.
+                Try changing the value stored on <strong>line 50</strong> of App.js.
             </p>
             <div>The stored value is: {storageValue}</div>
         </div>
