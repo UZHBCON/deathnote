@@ -1,0 +1,5 @@
+build:
+  docker:
+    web: Frontend.Dockerfile # Frontend.Dockerfile We need to deploy frontend and blockchain separately to 2 separate heroku instances.
+                               # Thus, we need to commit Blockchain / Frontend separately. E.g. commit this file with Blockchain.Dockerfile
+                               # Build app. Then exchange Blockchain with Frontend, commit, build app.
