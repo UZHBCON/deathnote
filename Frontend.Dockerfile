@@ -1,9 +1,9 @@
 FROM node:14
 
-ADD client/package.json /deathnote/client/package.json
+ADD client /deathnote/client
 
 WORKDIR /deathnote/client
 
-RUN yarn install
+RUN yarn installd
 
 CMD ["yarn", "start"]
