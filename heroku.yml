@@ -1,4 +1,4 @@
 build:
   docker:
-    frontend: Frontend.Dockerfile
+    web: Frontend.Dockerfile
     blockchain: Blockchain.Dockerfile
