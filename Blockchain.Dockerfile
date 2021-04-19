@@ -1,6 +1,6 @@
 FROM node:14
 
-ADD . /deathnote
+ADD . /deathnote/
 
 RUN npm install truffle -g
 
