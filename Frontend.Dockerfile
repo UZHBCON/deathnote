@@ -4,6 +4,6 @@ ADD client /deathnote/client
 
 WORKDIR /deathnote/client
 
-RUN yarn installd
+RUN yarn install
 
 CMD ["yarn", "start"]
