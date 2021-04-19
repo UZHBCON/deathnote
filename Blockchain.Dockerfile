@@ -6,9 +6,7 @@ RUN npm install truffle -g
 
 WORKDIR /deathnote
 
-RUN truffle develop
-
-RUN compile && migrate
+RUN truffle compile && truffle migrate
 
 CMD ["truffle", "develop"]
 
