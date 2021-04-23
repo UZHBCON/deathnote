@@ -1,111 +1,130 @@
-// SPDX-License-Identifier: MIT
-pragma solidity >=0.4.21 <0.7.0;
+pragma solidity ^0.6.0;
+
+// Possible improvements
+// 1) handling invalid beneficiary addresses (i.e. if a tx gets reverted)
+// 2) Do we really need dynamic arrays with the validators and the beneficiaries? Shouldn't a mapping to the job?
+// 3) Allow validators to revoke confirmation as long as m is not reached (afterward not possible anymore)
+// 4) Add function to replace beneficiaries (-> only allow replacing entire array to avoid recalculating of shares?)
 
 contract DeathNote {
-  address public owner;
-  uint start;
-  uint end;
-  uint totalInheritors = 0;
-  uint totalVoters = 0;
-  uint amount = 0;
-  uint freezedAmount = 0; // after death confirmation
-  enum decision{DEATH, ALIVE, VOTELESS}
+    
+    // State variables
+	address payable public creator;
+	address[] public validators;
+	address[] public beneficiaries;
+	uint confirmationsRequired;
+	uint public waitingPeriodDays;
+	uint public balance;
+	
+	uint public numConfirmations;
+	mapping(address => bool) isValidator;
+	mapping(address => bool) isConfirmed;
+	mapping(address => bool) isBeneficiary;
+	uint public deadline;
+	bool public testamentRevoked;
 
-  mapping (uint => address) inheritors;
-  mapping (address => uint) weights;
-  mapping (uint => address) voters;
-  mapping (address => decision) deathConfirmations;
+    // Events
+	event Deposit(address indexed sender, uint amount, uint balance);
+	event ConfirmDeath(address indexed owner);
+	event RevokeTestament(address indexed creator);
 
-  constructor() public {
-    owner = msg.sender;
-  }
+    // Modifiers	
+	modifier onlyCreator() {
+	    require(msg.sender == creator, "Only creator is allowed to call this function");
+	    _;
+	}
+	
+	modifier onlyValidator() {
+	    require(isValidator[msg.sender], "Sender is not a legitimate validator");
+	    _;
+	}
+	
+	modifier onlyBeneficiary() {
+	    require(isBeneficiary[msg.sender], "You are not a beneficiary");
+	    _;
+	}
+	
+	modifier notConfirmed() {
+	    require(!isConfirmed[msg.sender], "Confirmation already submitted");
+	    _;
+	}
+	
+	modifier deathConfirmed() {
+	    require(deadline != 0, "No confirmed death yet");
+	    require(now >= deadline, "Waiting period has not ended yet");
+	    require(testamentRevoked == false, "Testament has been revoked");
+	    _;
+	}
+	
+	// Idea: only allow creator to submit txs up to the end of the waiting period. Afterwards, block funds for beneficiaries
+	modifier deathNotConfirmed() {
+	    require(deadline == 0 || now < deadline, "Waiting period has been exceeded, no more tx possible");
+	    _;
+	}
 
-  modifier restricted() {
-    require (
-      msg.sender == owner,
-      "Not authorized."
-    );
-    _;
-  }
+	constructor(address[] memory _validators, address[] memory _beneficiaries, uint _confirmationsRequired, uint _waitingPeriodDays) public payable {
+	    require(_validators.length > 0, "Validators required");
+	    require(_beneficiaries.length > 0, "Beneficiaries required");
+	    require(_confirmationsRequired > 0 && _confirmationsRequired <= _validators.length, "Invalid number of required confirmations");
+	    
+	    for(uint i=0; i<_validators.length; i++) {
+	        address validator = _validators[i];
+	        
+	        // prevent zero address and duplicates
+	        require(validator != address(0), "Invalid validator");
+	        require(!isValidator[validator], "Non-unique validator");
+	        isValidator[validator] = true;
+	        validators.push(validator);
+	    }
+	    
+	    for(uint i=0; i<_beneficiaries.length; i++) {
+	        address beneficiary = _beneficiaries[i];
+	        require(beneficiary != address(0), "Invalid beneficiary");
+	        require(!isBeneficiary[beneficiary], "Non-unique beneficiary");
+	        isBeneficiary[beneficiary] = true;
+	        beneficiaries.push(beneficiary);
+	    }
+	    
+	    confirmationsRequired = _confirmationsRequired;
+		creator = msg.sender;
+		balance = msg.value;
+		deadline = 0;
+		waitingPeriodDays = _waitingPeriodDays;
+	}
 
-  modifier isValidRecipient() {
-    require(
-      weights[msg.sender] != 0, // if key not exists, default uint value (0) is set
-      "Not allowed to withdraw money"
-    );
-    _;
-  }
-
-  modifier isValid() {
-    require(
-      end - start > 60,
-      "Required 60 days have not yet passed."
-    );
-    _;
-  }
-
-  function fund() public payable restricted {
-    amount += msg.value;
-    freezedAmount = amount;
-  }
-
-  function withdrawOwner(uint val) public restricted {
-    if (amount >= val) {
-      msg.sender.transfer(val);
-      amount -= val;
-      freezedAmount = amount;
-    }
-  }
-
-  function withdrawInheritor() public isValidRecipient isValid {
-    uint weightedAmount = freezedAmount * weights[msg.sender] / 100;
-
-    if (amount >= weightedAmount) {
-      msg.sender.transfer(weightedAmount);
-      amount -= weightedAmount;
-    }
-  }
-
-  function balance() public view returns (uint) {
-    return amount;
-  }
-
-  function deathConfirmation() public {
-      // TODO: use MultiSig and send events to all participants
-      freezedAmount = amount;
-      start = block.timestamp;
-  }
-
-  function setInheritor(address addr, uint weight) public restricted {
-    inheritors[totalInheritors++] = addr;
-    weights[addr] = weight;
-  }
-  
-  function removeInheritor(address addr) public restricted {
-      weights[addr] = 0; // inheritor gets nothing
-  }
-
-  function getAllInheritors() public view returns (address[] memory, uint[] memory) {
-    address[] memory tmpAddrs = new address[](totalInheritors);
-    uint[] memory tmpWeights = new uint[](totalInheritors); 
-
-    for(uint i = 0; i < totalInheritors; i++) {
-      tmpAddrs[i] = inheritors[i];
-      tmpWeights[i] = weights[inheritors[i]];
-    }
-    return (tmpAddrs, tmpWeights);
-  }
-
-  function getWeight(address addr) public view returns (uint) {
-    return weights[addr];
-  }
-
-  function setVoter(address addr) public restricted {
-    voters[totalVoters++] = addr;
-    deathConfirmations[addr] = decision.ALIVE; // default: alive
-  }
-  
-  function removeVoter(address addr) public restricted {
-      deathConfirmations[addr] = decision.VOTELESS; // voter lost right to vote
-  }
+    // TODO -> Change time unit to days
+	function confirmDeath() public onlyValidator notConfirmed {
+	    isConfirmed[msg.sender] = true;
+	    numConfirmations += 1;
+	    emit ConfirmDeath(msg.sender);
+	    
+	    if (numConfirmations == confirmationsRequired)
+	        deadline = now + (waitingPeriodDays * 1 seconds);
+	}
+	
+	function claimInheritanceShare() public onlyBeneficiary deathConfirmed {
+	    // Idea: Every beneficiary needs to claim its share on its own
+	    // NOTE: Use withdrawal pattern for security reasons (see solididty docs -> in case beneficiary is a SC with a messed up receive function)
+	    
+	    
+	}
+	
+	function revokeTestament() public onlyCreator deathNotConfirmed {
+	    require(testamentRevoked == false, "Testament already revoked");
+	    testamentRevoked = true;
+	    // prevention of re-entry attackes (see Solidity docs)
+	    uint amount = balance;
+	    balance = 0;
+	    creator.transfer(amount);
+	}
+	
+	function deposit() public payable onlyCreator deathNotConfirmed {
+	    balance += msg.value;
+	}
+	
+	function withdraw(uint _amount) public onlyCreator deathNotConfirmed {
+	    require(_amount <= balance, "Balance not sufficient");
+	    balance -= _amount;
+	    creator.transfer(_amount);
+	}
 }
