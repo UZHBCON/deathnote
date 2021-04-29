@@ -1,25 +1,37 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.6.0;
 
 // Possible improvements
 // 1) handling invalid beneficiary addresses (i.e. if a tx gets reverted)
-// 2) Do we really need dynamic arrays with the validators and the beneficiaries? Shouldn't a mapping to the job?
-// 3) Allow validators to revoke confirmation as long as m is not reached (afterward not possible anymore)
-// 4) Add function to replace beneficiaries (-> only allow replacing entire array to avoid recalculating of shares?)
+// 2) Allow validators to revoke confirmation as long as m is not reached (afterward not possible anymore)
+// 3) Add function to replace beneficiaries (-> only allow replacing entire array to avoid recalculating of shares?)
 
 contract DeathNote {
+    // Structs to track behaviour of participants
+    struct validatorState {
+        bool isValidator;
+        bool hasConfirmed;
+    }
+    
+    struct beneficiaryState {
+        bool isBeneficiary;
+        uint share;
+        bool shareClaimed;
+    }
     
     // State variables
 	address payable public creator;
-	address[] public validators;
-	address[] public beneficiaries;
+	// arrays are needed since mappings are virtually initialised (-> see Solidity docs)
+	address[] public trackValidators;
+	address[] public trackBeneficiaries;
 	uint confirmationsRequired;
 	uint public waitingPeriodDays;
 	uint public balance;
 	
 	uint public numConfirmations;
-	mapping(address => bool) isValidator;
-	mapping(address => bool) isConfirmed;
-	mapping(address => bool) isBeneficiary;
+	mapping(address => validatorState) validators;
+	mapping(address => beneficiaryState) beneficiaries;
+	
 	uint public deadline;
 	bool public testamentRevoked;
 
@@ -35,17 +47,17 @@ contract DeathNote {
 	}
 	
 	modifier onlyValidator() {
-	    require(isValidator[msg.sender], "Sender is not a legitimate validator");
+	    require(validators[msg.sender].isValidator, "Sender is not a legitimate validator");
 	    _;
 	}
 	
 	modifier onlyBeneficiary() {
-	    require(isBeneficiary[msg.sender], "You are not a beneficiary");
+	    require(beneficiaries[msg.sender].isBeneficiary, "You are not a beneficiary");
 	    _;
 	}
 	
 	modifier notConfirmed() {
-	    require(!isConfirmed[msg.sender], "Confirmation already submitted");
+	    require(!validators[msg.sender].hasConfirmed, "Confirmation already submitted");
 	    _;
 	}
 	
@@ -62,27 +74,37 @@ contract DeathNote {
 	    _;
 	}
 
-	constructor(address[] memory _validators, address[] memory _beneficiaries, uint _confirmationsRequired, uint _waitingPeriodDays) public payable {
+	constructor(address[] memory _validators, address[] memory _beneficiaries, uint[] memory _shares, uint _confirmationsRequired, uint _waitingPeriodDays) public payable {
 	    require(_validators.length > 0, "Validators required");
 	    require(_beneficiaries.length > 0, "Beneficiaries required");
+	    require(_beneficiaries.length == _shares.length, "Share for every beneficiary required");
 	    require(_confirmationsRequired > 0 && _confirmationsRequired <= _validators.length, "Invalid number of required confirmations");
-	    
+
+        uint sumShares = 0;
+        for(uint i=0; i<_shares.length; i++) {
+            sumShares += _shares[i];
+        }
+        require(sumShares == 100, "Sum of all shares must add up to 100");
+
 	    for(uint i=0; i<_validators.length; i++) {
 	        address validator = _validators[i];
 	        
 	        // prevent zero address and duplicates
 	        require(validator != address(0), "Invalid validator");
-	        require(!isValidator[validator], "Non-unique validator");
-	        isValidator[validator] = true;
-	        validators.push(validator);
+	        require(!validators[validator].isValidator, "Non-unique validator");
+	        validators[validator].isValidator = true;
+	        trackValidators.push(validator);
 	    }
 	    
 	    for(uint i=0; i<_beneficiaries.length; i++) {
 	        address beneficiary = _beneficiaries[i];
+	        
+	        // prevent zero address and duplicates
 	        require(beneficiary != address(0), "Invalid beneficiary");
-	        require(!isBeneficiary[beneficiary], "Non-unique beneficiary");
-	        isBeneficiary[beneficiary] = true;
-	        beneficiaries.push(beneficiary);
+	        require(!beneficiaries[beneficiary].isBeneficiary, "Non-unique beneficiary");
+	        beneficiaries[beneficiary].isBeneficiary = true;
+	        beneficiaries[beneficiary].share = _shares[i];
+	        trackBeneficiaries.push(beneficiary);
 	    }
 	    
 	    confirmationsRequired = _confirmationsRequired;
@@ -92,9 +114,9 @@ contract DeathNote {
 		waitingPeriodDays = _waitingPeriodDays;
 	}
 
-    // TODO -> Change time unit to days
+    // NOTE -> Change time unit to days
 	function confirmDeath() public onlyValidator notConfirmed {
-	    isConfirmed[msg.sender] = true;
+	    validators[msg.sender].hasConfirmed = true;
 	    numConfirmations += 1;
 	    emit ConfirmDeath(msg.sender);
 	    
