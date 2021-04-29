@@ -99,7 +99,7 @@ contract DeathNote {
 	}
 	
 	modifier notRevoked() {
-	    require(testamentRevoked == false, "Testament already revoked");
+	    require(testamentRevoked == false, "Testament has been revoked");
 	    _;
 	}
 	
@@ -177,5 +177,36 @@ contract DeathNote {
 	    require(_amount <= balance, "Balance not sufficient");
 	    balance -= _amount;
 	    creator.transfer(_amount);
+	}
+	
+	function replaceValidators() public {
+	    // idea: give the creator a cheaper alternative to revoking the testament in case of malicious behaviour
+	    
+	    
+	}
+	
+	function replaceBeneficiaries(address[] memory _newBeneficiaries, uint[] memory _newShares) public onlyCreator deathNotConfirmed notRevoked validBeneficiaries(_newBeneficiaries, _newShares) {
+	    // idea: only allow replacing beneficiaries if no vote has been submitted yet (-> remind creator about potential malicious behaviour)
+	    require(numConfirmations == 0, "Votes have been submitted, consider replacing validators first");
+	    // delete existing beneficiaries
+	    for(uint i=0; i<trackBeneficiaries.length; i++) {
+	        delete beneficiaries[trackBeneficiaries[i]];
+	    }
+	    
+	    uint bound = trackBeneficiaries.length;
+	    for(uint i=0; i<bound; i++) {
+	        trackBeneficiaries.pop();
+	    }
+	    
+	    // add new beneficiaries
+	    for(uint i=0; i<_newBeneficiaries.length; i++) {
+	        address beneficiary = _newBeneficiaries[i];
+	        // prevent zero address and duplicates
+	        require(beneficiary != address(0), "Invalid beneficiary");
+	        require(!beneficiaries[beneficiary].isBeneficiary, "Non-unique beneficiary");
+	        beneficiaries[beneficiary].isBeneficiary = true;
+	        beneficiaries[beneficiary].share = _newShares[i];
+	        trackBeneficiaries.push(beneficiary);
+	    }
 	}
 }
