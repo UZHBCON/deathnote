@@ -2,10 +2,9 @@
 pragma solidity ^0.6.0;
 
 // Possible improvements
-// 1) handling invalid beneficiary addresses (i.e. if a tx gets reverted)
-// 2) Allow validators to revoke confirmation as long as m is not reached (afterward not possible anymore)
-// 3) Add function to replace beneficiaries (-> only allow replacing entire array to avoid recalculating of shares?)
-// 4) Add events
+// 1) Allow validators to revoke confirmation as long as m is not reached (afterward not possible anymore)
+// 2) Add function to replace beneficiaries (-> only allow replacing entire array to avoid recalculating of shares?)
+// 3) Add events
 
 contract DeathNote {
     // Structs to track behaviour of participants
@@ -25,7 +24,7 @@ contract DeathNote {
 	// arrays are needed since mappings are virtually initialised (-> see Solidity docs)
 	address[] public trackValidators;
 	address[] public trackBeneficiaries;
-	uint confirmationsRequired;
+	uint public confirmationsRequired;
 	uint public waitingPeriodDays;
 	uint public balance;
 	uint public balanceFrozen;
@@ -82,6 +81,11 @@ contract DeathNote {
 	    _;
 	}
 	
+	modifier notRevoked() {
+	    require(testamentRevoked == false, "Testament already revoked");
+	    _;
+	}
+	
 	constructor(address[] memory _validators, address[] memory _beneficiaries, uint[] memory _shares, uint _confirmationsRequired, uint _waitingPeriodDays) public payable {
 	    require(_validators.length > 0, "Validators required");
 	    require(_beneficiaries.length > 0, "Beneficiaries required");
@@ -122,7 +126,7 @@ contract DeathNote {
 		waitingPeriodDays = _waitingPeriodDays;
 	}
 
-    // NOTE -> Change time unit to days
+    // NOTE -> Change time unit to days for a shipping version (seconds for demonstration purposes)
 	function confirmDeath() public onlyValidator notConfirmed {
 	    validators[msg.sender].hasConfirmed = true;
 	    numConfirmations += 1;
@@ -149,8 +153,7 @@ contract DeathNote {
 	    beneficiaries[msg.sender].shareClaimed = true;
 	}
 	
-	function revokeTestament() public onlyCreator deathNotConfirmed {
-	    require(testamentRevoked == false, "Testament already revoked");
+	function revokeTestament() public onlyCreator deathNotConfirmed notRevoked {
 	    testamentRevoked = true;
 	    // prevention of re-entry attackes (see Solidity docs)
 	    uint amount = balance;
@@ -158,11 +161,12 @@ contract DeathNote {
 	    creator.transfer(amount);
 	}
 	
-	function deposit() public payable onlyCreator deathNotConfirmed {
+	function deposit() public payable onlyCreator deathNotConfirmed notRevoked {
+	    require(msg.value > 0, "Specify amount to deposit in tx");
 	    balance += msg.value;
 	}
 	
-	function withdraw(uint _amount) public onlyCreator deathNotConfirmed {
+	function withdraw(uint _amount) public onlyCreator deathNotConfirmed notRevoked {
 	    require(_amount <= balance, "Balance not sufficient");
 	    balance -= _amount;
 	    creator.transfer(_amount);
