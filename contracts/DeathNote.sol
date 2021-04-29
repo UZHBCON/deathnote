@@ -5,6 +5,7 @@ pragma solidity ^0.6.0;
 // 1) handling invalid beneficiary addresses (i.e. if a tx gets reverted)
 // 2) Allow validators to revoke confirmation as long as m is not reached (afterward not possible anymore)
 // 3) Add function to replace beneficiaries (-> only allow replacing entire array to avoid recalculating of shares?)
+// 4) Add events
 
 contract DeathNote {
     // Structs to track behaviour of participants
@@ -27,6 +28,8 @@ contract DeathNote {
 	uint confirmationsRequired;
 	uint public waitingPeriodDays;
 	uint public balance;
+	uint public balanceFrozen;
+	bool public firstClaim = true;
 	
 	uint public numConfirmations;
 	mapping(address => validatorState) validators;
@@ -73,7 +76,12 @@ contract DeathNote {
 	    require(deadline == 0 || now < deadline, "Waiting period has been exceeded, no more tx possible");
 	    _;
 	}
-
+	
+	modifier shareNotClaimed() {
+	    require(!beneficiaries[msg.sender].shareClaimed, "Share already claimed");
+	    _;
+	}
+	
 	constructor(address[] memory _validators, address[] memory _beneficiaries, uint[] memory _shares, uint _confirmationsRequired, uint _waitingPeriodDays) public payable {
 	    require(_validators.length > 0, "Validators required");
 	    require(_beneficiaries.length > 0, "Beneficiaries required");
@@ -120,15 +128,25 @@ contract DeathNote {
 	    numConfirmations += 1;
 	    emit ConfirmDeath(msg.sender);
 	    
-	    if (numConfirmations == confirmationsRequired)
+	    if (numConfirmations == confirmationsRequired) {
 	        deadline = now + (waitingPeriodDays * 1 seconds);
+	    }
 	}
 	
-	function claimInheritanceShare() public onlyBeneficiary deathConfirmed {
+	function claimInheritanceShare() public onlyBeneficiary deathConfirmed shareNotClaimed {
 	    // Idea: Every beneficiary needs to claim its share on its own
-	    // NOTE: Use withdrawal pattern for security reasons (see solididty docs -> in case beneficiary is a SC with a messed up receive function)
+
+	    if (firstClaim) {
+	        require(balance != 0, "No inheritance left");
+	        balanceFrozen = balance;
+	        firstClaim = false;
+	    }
 	    
-	    
+	    // Use of withdrawal pattern for security reasons (see Solididty docs)
+	    uint amount = (beneficiaries[msg.sender].share * balanceFrozen) / 100;
+	    balance -= amount;
+	    msg.sender.transfer(amount);
+	    beneficiaries[msg.sender].shareClaimed = true;
 	}
 	
 	function revokeTestament() public onlyCreator deathNotConfirmed {
