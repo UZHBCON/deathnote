@@ -1,10 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.6.0;
 
-// Possible improvements
-// 1) Allow validators to revoke confirmation as long as m is not reached (afterward not possible anymore)
-// 2) Add events
-
 contract DeathNote {
     // Structs to track behaviour of participants
     struct validatorState {
@@ -37,9 +33,14 @@ contract DeathNote {
 	bool public testamentRevoked;
 
     // Events
-	event Deposit(address indexed sender, uint amount, uint balance);
-	event ConfirmDeath(address indexed owner);
+	event ConfirmDeath(address indexed sender);
+	event ClaimShare(address indexed sender, uint amount);
 	event RevokeTestament(address indexed creator);
+	event Deposit(address indexed sender, uint amount, uint newBalance);
+    event Withdrawal(address indexed sender, uint amount, uint newBalance);
+    event ReplaceValidators(address indexed sender, address[] newValidators, uint newConfReq);
+    event ReplaceBeneficiaries(address indexed sender, address[] newBeneficiaries, uint[] newShares);
+
 
     // Modifiers
     modifier validValidators(address[] memory _Validators, uint _ConfReq) {
@@ -157,6 +158,7 @@ contract DeathNote {
 	    balance -= amount;
 	    msg.sender.transfer(amount);
 	    beneficiaries[msg.sender].shareClaimed = true;
+	    emit ClaimShare(msg.sender, amount);
 	}
 	
 	function revokeTestament() public onlyCreator deathNotConfirmed notRevoked {
@@ -165,17 +167,20 @@ contract DeathNote {
 	    uint amount = balance;
 	    balance = 0;
 	    creator.transfer(amount);
+	    emit RevokeTestament(msg.sender);
 	}
 	
 	function deposit() public payable onlyCreator deathNotConfirmed notRevoked {
 	    require(msg.value > 0, "Specify amount to deposit in tx");
 	    balance += msg.value;
+	    emit Deposit(msg.sender, msg.value, balance);
 	}
 	
 	function withdraw(uint _amount) public onlyCreator deathNotConfirmed notRevoked {
 	    require(_amount <= balance, "Balance not sufficient");
 	    balance -= _amount;
 	    creator.transfer(_amount);
+	    emit Withdrawal(msg.sender, _amount, balance);
 	}
 	
 	// idea: give the creator a cheaper alternative to revoking the testament in case of malicious behaviour
@@ -205,6 +210,7 @@ contract DeathNote {
 	    }
 	    
 	    confirmationsRequired = _newConfReq;
+	    emit ReplaceValidators(msg.sender, _newValidators, _newConfReq);
 	}
 	
 	function replaceBeneficiaries(address[] memory _newBeneficiaries, uint[] memory _newShares) public onlyCreator deathNotConfirmed notRevoked validBeneficiaries(_newBeneficiaries, _newShares) {
@@ -230,5 +236,6 @@ contract DeathNote {
 	        beneficiaries[beneficiary].share = _newShares[i];
 	        trackBeneficiaries.push(beneficiary);
 	    }
+	    emit ReplaceBeneficiaries(msg.sender, _newBeneficiaries, _newShares);
 	}
 }
