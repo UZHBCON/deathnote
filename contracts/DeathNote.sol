@@ -3,8 +3,7 @@ pragma solidity ^0.6.0;
 
 // Possible improvements
 // 1) Allow validators to revoke confirmation as long as m is not reached (afterward not possible anymore)
-// 2) Add function to replace beneficiaries (-> only allow replacing entire array to avoid recalculating of shares?)
-// 3) Add events
+// 2) Add events
 
 contract DeathNote {
     // Structs to track behaviour of participants
@@ -179,10 +178,33 @@ contract DeathNote {
 	    creator.transfer(_amount);
 	}
 	
-	function replaceValidators() public {
-	    // idea: give the creator a cheaper alternative to revoking the testament in case of malicious behaviour
+	// idea: give the creator a cheaper alternative to revoking the testament in case of malicious behaviour
+	function replaceValidators(address[] memory _newValidators, uint _newConfReq) public onlyCreator deathNotConfirmed notRevoked validValidators(_newValidators, _newConfReq) {
+	    // delete existing validators
+	    for(uint i=0; i<trackValidators.length; i++) {
+	        delete validators[trackValidators[i]];
+	    }
 	    
+	    uint bound = trackValidators.length;
+	    for(uint i=0; i<bound; i++) {
+	        trackValidators.pop();
+	    }
 	    
+	    // reset state variables
+	    numConfirmations = 0;
+	    deadline = 0;
+	    
+	    // add newe validators
+	    for(uint i=0; i<_newValidators.length; i++) {
+	        address validator = _newValidators[i];
+	        // prevent zero address and duplicates
+	        require(validator != address(0), "Invalid validator");
+	        require(!validators[validator].isValidator, "Non-unique validator");
+	        validators[validator].isValidator = true;
+	        trackValidators.push(validator);
+	    }
+	    
+	    confirmationsRequired = _newConfReq;
 	}
 	
 	function replaceBeneficiaries(address[] memory _newBeneficiaries, uint[] memory _newShares) public onlyCreator deathNotConfirmed notRevoked validBeneficiaries(_newBeneficiaries, _newShares) {
