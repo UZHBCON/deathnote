@@ -42,7 +42,24 @@ contract DeathNote {
 	event ConfirmDeath(address indexed owner);
 	event RevokeTestament(address indexed creator);
 
-    // Modifiers	
+    // Modifiers
+    modifier validValidators(address[] memory _Validators, uint _ConfReq) {
+        require(_Validators.length > 0, "Validators required");
+        require(_ConfReq > 0 && _ConfReq <= _Validators.length, "Invalid number of required confirmations");
+        _;
+    }
+    
+    modifier validBeneficiaries(address[] memory _Beneficiaries, uint[] memory _Shares) {
+        require(_Beneficiaries.length > 0, "Beneficiaries required");
+	    require(_Beneficiaries.length == _Shares.length, "Share for every beneficiary required");
+	    uint sumShares = 0;
+        for(uint i=0; i<_Shares.length; i++) {
+            sumShares += _Shares[i];
+        }
+        require(sumShares == 100, "Sum of all shares must add up to 100");
+	    _;
+    }
+    
 	modifier onlyCreator() {
 	    require(msg.sender == creator, "Only creator is allowed to call this function");
 	    _;
@@ -86,23 +103,13 @@ contract DeathNote {
 	    _;
 	}
 	
-	constructor(address[] memory _validators, address[] memory _beneficiaries, uint[] memory _shares, uint _confirmationsRequired, uint _waitingPeriodDays) public payable {
-	    require(_validators.length > 0, "Validators required");
-	    require(_beneficiaries.length > 0, "Beneficiaries required");
-	    require(_beneficiaries.length == _shares.length, "Share for every beneficiary required");
-	    require(_confirmationsRequired > 0 && _confirmationsRequired <= _validators.length, "Invalid number of required confirmations");
-
-        uint sumShares = 0;
-        for(uint i=0; i<_shares.length; i++) {
-            sumShares += _shares[i];
-        }
-        require(sumShares == 100, "Sum of all shares must add up to 100");
-
+	constructor(address[] memory _validators, address[] memory _beneficiaries, uint[] memory _shares, uint _confirmationsRequired, uint _waitingPeriodDays) public payable validValidators(_validators, _confirmationsRequired) validBeneficiaries(_beneficiaries, _shares) {
+	    
 	    for(uint i=0; i<_validators.length; i++) {
 	        address validator = _validators[i];
-	        
-	        // prevent zero address and duplicates
+	        // prevent zero address
 	        require(validator != address(0), "Invalid validator");
+	        // not placed in modifier to allow replacements
 	        require(!validators[validator].isValidator, "Non-unique validator");
 	        validators[validator].isValidator = true;
 	        trackValidators.push(validator);
@@ -110,9 +117,9 @@ contract DeathNote {
 	    
 	    for(uint i=0; i<_beneficiaries.length; i++) {
 	        address beneficiary = _beneficiaries[i];
-	        
 	        // prevent zero address and duplicates
 	        require(beneficiary != address(0), "Invalid beneficiary");
+	        // not placed in modifier to allow replacements
 	        require(!beneficiaries[beneficiary].isBeneficiary, "Non-unique beneficiary");
 	        beneficiaries[beneficiary].isBeneficiary = true;
 	        beneficiaries[beneficiary].share = _shares[i];
