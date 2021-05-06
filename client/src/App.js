@@ -5,6 +5,8 @@ import "./App.css";
 
 function App() {
     const [storageValue, setStorageValue] = useState(0);
+    const [contractValue, setContractValue] = useState(null);
+    const [isLoading, setIsLoading] = useState(false);
     const [web3, setWeb3] = useState(null);
     const [accounts, setAccounts] = useState(null);
     const [contract, setContract] = useState(null);
@@ -47,29 +49,33 @@ function App() {
     const runExample = async () => {
 
         // Stores a given value, 5 by default.
-        await contract.methods.set(5).send({from: accounts[0]});
+        setIsLoading(true);
+        await contract.methods.set(storageValue).send({from: accounts[0]});
 
         // Get the value from the contract to prove it worked.
         const response = await contract.methods.get().call();
         console.log(response);
 
         // Update state with the result.
-        setStorageValue(response);
+        setContractValue(response);
+        setIsLoading(false);
     };
 
+    if (isLoading) {
+        return <h1>Please wait while processing transaction...</h1>
+    }
+
     if (!web3) {
-        return <div>Loading Web3, accounts, and contract...</div>;
+        return <h1>Loading Web3, accounts, and contract...</h1>;
     }
     return (
         <div className="App">
             <h1>Good to Go!</h1>
             <p>Your Truffle Box is installed and ready.</p>
             <h2>Smart Contract Example</h2>
-            <button onClick={runExample}>Click me</button>
-            <p>
-                Try changing the value stored on <strong>line 50</strong> of App.js.
-            </p>
-            <div>The stored value is: {storageValue}</div>
+            <input type="text" onChange={(e) => setStorageValue(e.target.value)}/>
+            <button onClick={runExample}>Set value</button>
+            <div>The stored value (+100) is: {contractValue}</div>
         </div>
     );
 }
