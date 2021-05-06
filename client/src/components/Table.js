@@ -2,7 +2,7 @@ import React from "react"
 
 function Table() {
     return (
-        <table class="table is-hoverable is-fullwidth">
+        <table className="table is-hoverable is-fullwidth">
         <thead>
           <tr>
             <th>Voters</th>
