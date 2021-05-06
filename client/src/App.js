@@ -1,5 +1,5 @@
 import React, {useEffect, useState} from "react";
-import SimpleStorageContract from "./contracts/SimpleStorage.json";
+import DeathNoteContract from "./contracts/DeathNote.json";
 import getWeb3 from "./getWeb3";
 import "./App.css";
 
@@ -22,10 +22,10 @@ function App() {
 
           // Get the contract instance.
           const networkId = await web3.eth.net.getId();
-          const deployedNetwork = SimpleStorageContract.networks[networkId];
+          const deployedNetwork = DeathNoteContract.networks[networkId];
 
           const instance = new web3.eth.Contract(
-              SimpleStorageContract.abi,
+              DeathNoteContract.abi,
               deployedNetwork && deployedNetwork.address,
           );
 
@@ -46,18 +46,15 @@ function App() {
       setupWeb3();
     });
 
-    const runExample = async () => {
-
-        // Stores a given value, 5 by default.
+    const confirmDeath = async () => {
         setIsLoading(true);
-        await contract.methods.set(storageValue).send({from: accounts[0]});
+        await contract.methods.confirmDeath().send({from: accounts[0]});
+        setIsLoading(false);
+    };
 
-        // Get the value from the contract to prove it worked.
-        const response = await contract.methods.get().call();
-        console.log(response);
-
-        // Update state with the result.
-        setContractValue(response);
+    const claimInheritanceShare = async () => {
+        setIsLoading(true);
+        await contract.methods.claimInheritanceShare().send({from: accounts[0]});
         setIsLoading(false);
     };
 
@@ -70,12 +67,14 @@ function App() {
     }
     return (
         <div className="App">
-            <h1>Good to Go!</h1>
-            <p>Your Truffle Box is installed and ready.</p>
-            <h2>Smart Contract Example</h2>
-            <input type="text" onChange={(e) => setStorageValue(e.target.value)}/>
-            <button onClick={runExample}>Set value</button>
-            <div>The stored value (+100) is: {contractValue}</div>
+            <h1>DeathNote</h1>
+            <h2 style={{color: "orange"}}>Check console for output</h2>
+            <p>Switch Account to: Validator</p>
+            <p>Reload page!</p>
+            <button onClick={confirmDeath}>Confirm Death</button>
+            <p>Switch Account to: Beneficiary</p>
+            <p>Reload page!</p>
+            <button onClick={claimInheritanceShare}>Claim Inheritance Share</button>            <div>The stored value (+100) is: {contractValue}</div>
         </div>
     );
 }

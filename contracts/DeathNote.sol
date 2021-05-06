@@ -103,7 +103,13 @@ contract DeathNote {
 	_;
     }
 	
-    constructor(address[] memory _validators, address[] memory _beneficiaries, uint[] memory _shares, uint _confirmationsRequired, uint _waitingPeriodDays) public payable validValidators(_validators, _confirmationsRequired) validBeneficiaries(_beneficiaries, _shares) {
+    constructor(
+		address[] memory _validators,
+		address[] memory _beneficiaries,
+		uint[] memory _shares,
+		uint _confirmationsRequired,
+		uint _waitingPeriodDays
+	) public payable validValidators(_validators, _confirmationsRequired) validBeneficiaries(_beneficiaries, _shares) {
 	    
 	for(uint i=0; i<_validators.length; i++) {
 	    address validator = _validators[i];

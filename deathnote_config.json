@@ -1,0 +1,7 @@
+{
+  "validators": ["0xD6f3B793b35149571c7f29D3Ff100f880be8E96A"],
+  "beneficiaries" : ["0xD6f3B793b35149571c7f29D3Ff100f880be8E96A"],
+  "shares": [100],
+  "confirmationsRequired": 1,
+  "waitingPeriodDays": 0
+}
