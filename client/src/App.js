@@ -2,6 +2,8 @@ import React, {useEffect, useState} from "react";
 import SimpleStorageContract from "./contracts/SimpleStorage.json";
 import getWeb3 from "./getWeb3";
 import "./App.css";
+import "./App.sass";
+import Main from "./components/Main.js";
 
 function App() {
     const [storageValue, setStorageValue] = useState(0);
@@ -69,14 +71,7 @@ function App() {
         return <h1>Loading Web3, accounts, and contract...</h1>;
     }
     return (
-        <div className="App">
-            <h1>Good to Go!</h1>
-            <p>Your Truffle Box is installed and ready.</p>
-            <h2>Smart Contract Example</h2>
-            <input type="text" onChange={(e) => setStorageValue(e.target.value)}/>
-            <button onClick={runExample}>Set value</button>
-            <div>The stored value (+100) is: {contractValue}</div>
-        </div>
+       <Main></Main> 
     );
 }
 
