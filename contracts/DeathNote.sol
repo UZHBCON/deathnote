@@ -245,11 +245,19 @@ contract DeathNote {
 	emit ReplaceBeneficiaries(msg.sender, _newBeneficiaries, _newShares);
     }
 
-	function getAllValidators() public view returns (address[] memory) {
-        return trackValidators;
+	function getAllValidators() public view returns (address[] memory, bool[] memory) {
+        bool[] memory conf_arr = new bool[](trackValidators.length);
+		for (uint i = 0; i < trackValidators.length; i++) {
+			conf_arr[i] = validators[trackValidators[i]].hasConfirmed;
+		}
+		return (trackValidators, conf_arr);
     }
 
-	function getAllBeneficiaries() public view returns (address[] memory) {
-		return trackBeneficiaries;
+	function getAllBeneficiaries() public view returns (address[] memory, uint[] memory) {
+		uint[] memory share_arr = new uint[](trackBeneficiaries.length);
+		for (uint i = 0; i < trackBeneficiaries.length; i++) {
+			share_arr[i]  = beneficiaries[trackBeneficiaries[i]].share;
+		}
+		return (trackBeneficiaries, share_arr);
 	}
 }

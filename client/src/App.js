@@ -5,7 +5,7 @@ import "./App.css";
 import "./App.sass";
 import logo from './images/logo.png';
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
-import {faHome, faBookDead, faMoneyBillWave, faUsers} from '@fortawesome/free-solid-svg-icons';
+import {faHome, faBookDead, faMoneyBillWave, faBan, faExchangeAlt} from '@fortawesome/free-solid-svg-icons';
 import {faGithub} from '@fortawesome/free-brands-svg-icons';
 import Table from "./components/Table"
 
@@ -15,10 +15,14 @@ function App() {
     const [accounts, setAccounts] = useState(null);
     const [contract, setContract] = useState(null);
     const [address, setAddress] = useState('');
+    const [balance, setBalance] = useState(0);
     const [validators, setValidatorsState] = useState(null);
     const [beneficiaries, setBeneficiariesState] = useState(null);
     const [creator, setCreator] = useState('');
-    const [showTable, setShowTable] = useState(false);
+    const [isCreator, setIsCreator] = useState(false);
+    const [isBeneficiary, setIsBeneficiary] = useState(false);
+    const [isValidator, setIsValidator] = useState(false);
+    const [inputAmount, setInputAmount] = useState(0);
 
     useEffect(() => {
       async function setupWeb3() {
@@ -45,6 +49,8 @@ function App() {
           setContract(instance);
           setAddress(instance.options.address);
           setCreator(await instance.methods.creator().call());
+          setBalance(await instance.methods.balance().call());
+          setParticipants(instance);
         } catch (error) {
           // Catch any errors for any of the above operations.
           alert(
@@ -57,10 +63,46 @@ function App() {
     });
 
     useEffect(() => {
-        if (validators != null && beneficiaries != null) {
-            setShowTable(true);
+        async function initUser() {
+            if (validators != null && beneficiaries != null) {
+
+                console.log(Object.entries(validators))
+
+                // set specific user from account number
+                if (accounts[0] === creator) {
+                    setIsCreator(true);
+                } 
+
+                if (Object.keys(validators).includes(accounts[0])) {
+                    setIsValidator(true);
+                } 
+
+                if (Object.keys(beneficiaries).includes(accounts[0])) {
+                    setIsBeneficiary(true);
+                }
+            }
         }
-      }, [validators, beneficiaries]); 
+        initUser();
+    }, [validators, beneficiaries]);
+
+
+    const setParticipants = async (instance) => {
+        let val_arr = await instance.methods.getAllValidators().call();
+        let ben_arr = await instance.methods.getAllBeneficiaries().call();
+
+
+        let tmp = {}
+        for (var i = 0; i < val_arr[0].length; i++) {
+            tmp[val_arr[0][i]] = val_arr[1][i];
+        }
+        setValidatorsState(tmp)
+
+        tmp = {}
+        for (i = 0; i < ben_arr[0].length; i++) {
+            tmp[ben_arr[0][i]] = ben_arr[1][i];
+        }
+        setBeneficiariesState(tmp)
+    }
 
     const confirmDeath = async () => {
         setIsLoading(true);
@@ -84,17 +126,38 @@ function App() {
         }
     };
 
-    const showParticipants = async () => {
+    const revokeTestament = async () => {
         setIsLoading(true);
         try {
-            setValidatorsState(await contract.methods.getAllValidators().call());
-            setBeneficiariesState(await contract.methods.getAllBeneficiaries().call());
+            await contract.methods.revokeTestament().send({from: accounts[0]});
         } catch (e) {
             console.error(e)
         } finally {
             setIsLoading(false);
         }
-    }
+    };
+
+    const withdraw = async () => {
+        setIsLoading(true);
+        try {
+            await contract.methods.withdraw(inputAmount).send({from: accounts[0]});
+        } catch (e) {
+            console.error(e)
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const deposit = async () => {
+        setIsLoading(true);
+        try {
+            await contract.methods.deposit().send({from: accounts[0], value: inputAmount});
+        } catch (e) {
+            console.error(e)
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     if (isLoading) {
         return <h1>Please wait while processing transaction...</h1>
@@ -163,37 +226,92 @@ function App() {
                         <input className="input is-large" style={{width: 400}} type="text" value={creator} disabled></input>
                     </div>
                 </div>
-
-                <div className="controls mb-4">
-                  <a className="button is-white mr-2" onClick={confirmDeath}>
-                      <span className="icon">
-                          <FontAwesomeIcon icon={faBookDead} />
-                      </span>
-                      <span>Confirm Death</span>
-                  </a>
-                  <a className="button is-white mr-2" onClick={claimInheritanceShare}>
-                      <span className="icon">
-                          <FontAwesomeIcon icon={faMoneyBillWave} />
-                      </span>
-                      <span>Claim Inheritance Share</span>
-                  </a>
-                  <a className="button is-white mr-2" onClick={showParticipants}>
-                      <span className="icon">
-                          <FontAwesomeIcon icon={faUsers} />
-                      </span>
-                      <span>Show participants</span>
-                  </a> 
+                <div className="columns is-gapless">
+                    <div className="column is-2">
+                            <p className="mr-2">Amount (Wei):</p>
+                        </div>
+                        <div className="control column">
+                            <input className="input is-large" style={{width: 400}} type="text" value={inputAmount} onChange={e => setInputAmount(e.target.value)}></input>
+                    </div>
+                    <div className="column is-2">
+                        <p className="mr-2">Balance (Wei):</p>
+                    </div>
+                    <div className="control column">
+                        <input className="input is-large" style={{width: 400}} type="text" value={balance} disabled></input>
+                    </div>
                 </div>
-                {showTable && 
+                <div className="controls mb-4">
+                    {isCreator &&
+                            <div className="controls mb-4">
+                                 <a className="button is-white mr-2" onClick={deposit}>
+                                    <span className="icon">
+                                        <FontAwesomeIcon icon={faMoneyBillWave} />
+                                    </span>
+                                    <span>Deposit</span>
+                                </a>
+                                <a className="button is-white mr-2" onClick={withdraw}>
+                                    <span className="icon">
+                                        <FontAwesomeIcon icon={faMoneyBillWave} />
+                                    </span>
+                                    <span>Withdraw</span>
+                                </a>
+                                <a className="button is-white mr-2" onClick={revokeTestament}>
+                                    <span className="icon">
+                                        <FontAwesomeIcon icon={faBan} />
+                                    </span>
+                                    <span>Revoke Contract</span>
+                                </a>
+                                <a className="button is-white mr-2" onClick={revokeTestament}>
+                                    <span className="icon">
+                                        <FontAwesomeIcon icon={faExchangeAlt} />
+                                    </span>
+                                    <span>Replace Voters</span>
+                                </a>
+                                <a className="button is-white mr-2" onClick={revokeTestament}>
+                                    <span className="icon">
+                                        <FontAwesomeIcon icon={faExchangeAlt} />
+                                    </span>
+                                    <span>Replace Beneficiaries</span>
+                                </a>
+                            </div>
+                    }
+
+                    {isValidator && 
+                        <a className="button is-white mr-2" onClick={confirmDeath}>
+                            <span className="icon">
+                                <FontAwesomeIcon icon={faBookDead} />
+                            </span>
+                            <span>Confirm Death</span>
+                        </a>
+                    }
+                    {isBeneficiary &&
+                        <a className="button is-white mr-2" onClick={claimInheritanceShare}>
+                            <span className="icon">
+                                <FontAwesomeIcon icon={faMoneyBillWave} />
+                            </span>
+                            <span>Claim Inheritance Share</span>
+                        </a>
+                    }
+                </div>
+                {isCreator && 
                     <div>
                         <table className="table is-hoverable is-fullwidth">
                             <thead>
                                 <tr>
                                     <th>Voters</th>
+                                    <th>Death Confirmed</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {Object.entries(validators).map(row => {return <tr><td key={"val_" + row[0]}>{row[1]}</td></tr>})}
+                                {
+                                Object.entries(validators).map(row => {
+                                    return (
+                                        <tr>
+                                            <td >{row[0]}</td>
+                                            <td>{row[1] ? "true" : "false"}</td>
+                                        </tr>
+                                    )})
+                                }
                             </tbody>    
                         </table>
 
@@ -201,10 +319,19 @@ function App() {
                             <thead>
                                 <tr>
                                     <th>Benficiaries</th>
+                                    <th>Share</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {Object.entries(beneficiaries).map(row => {return <tr><td key={"ben_" + row[0]}>{row[1]}</td></tr>})}
+                                {
+                                Object.entries(beneficiaries).map(row => {
+                                    return (
+                                        <tr>
+                                            <td>{row[0]}</td>
+                                            <td>{row[1]}</td>
+                                        </tr>
+                                    )})
+                                }
                             </tbody>
                         </table>
                     </div>
