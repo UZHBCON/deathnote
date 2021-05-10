@@ -244,4 +244,12 @@ contract DeathNote {
 	}
 	emit ReplaceBeneficiaries(msg.sender, _newBeneficiaries, _newShares);
     }
+
+	function getAllValidators() public view returns (address[] memory) {
+        return trackValidators;
+    }
+
+	function getAllBeneficiaries() public view returns (address[] memory) {
+		return trackBeneficiaries;
+	}
 }

@@ -18,6 +18,7 @@ function App() {
     const [validators, setValidatorsState] = useState(null);
     const [beneficiaries, setBeneficiariesState] = useState(null);
     const [creator, setCreator] = useState('');
+    const [showTable, setShowTable] = useState(false);
 
     useEffect(() => {
       async function setupWeb3() {
@@ -43,7 +44,7 @@ function App() {
           setAccounts(accounts);
           setContract(instance);
           setAddress(instance.options.address);
-          setCreator(await instance.methods.creator.call().call());
+          setCreator(await instance.methods.creator().call());
         } catch (error) {
           // Catch any errors for any of the above operations.
           alert(
@@ -55,24 +56,44 @@ function App() {
       setupWeb3();
     });
 
+    useEffect(() => {
+        if (validators != null && beneficiaries != null) {
+            setShowTable(true);
+        }
+      }, [validators, beneficiaries]); 
+
     const confirmDeath = async () => {
         setIsLoading(true);
-        await contract.methods.confirmDeath().send({from: accounts[0]});
-        setIsLoading(false);
+        try {
+            await contract.methods.confirmDeath().send({from: accounts[0]});
+        } catch (e) {
+            console.error(e)
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const claimInheritanceShare = async () => {
         setIsLoading(true);
-        await contract.methods.claimInheritanceShare().send({from: accounts[0]});
-        setIsLoading(false);
+        try {
+            await contract.methods.claimInheritanceShare().send({from: accounts[0]});
+        } catch (e) {
+            console.error(e)
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const showParticipants = async () => {
-      setValidatorsState(await contract.methods.trackValidators.call().call());
-      setBeneficiariesState(await contract.methods.trackBeneficiaries.call().call());
-      console.log(validators)
-      console.log(beneficiaries)
-
+        setIsLoading(true);
+        try {
+            setValidatorsState(await contract.methods.getAllValidators().call());
+            setBeneficiariesState(await contract.methods.getAllBeneficiaries().call());
+        } catch (e) {
+            console.error(e)
+        } finally {
+            setIsLoading(false);
+        }
     }
 
     if (isLoading) {
@@ -163,23 +184,34 @@ function App() {
                       <span>Show participants</span>
                   </a> 
                 </div>
-                <Table />
+                {showTable && 
+                    <div>
+                        <table className="table is-hoverable is-fullwidth">
+                            <thead>
+                                <tr>
+                                    <th>Voters</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {Object.entries(validators).map(row => {return <tr><td key={"val_" + row[0]}>{row[1]}</td></tr>})}
+                            </tbody>    
+                        </table>
+
+                        <table className="table is-hoverable is-fullwidth">
+                            <thead>
+                                <tr>
+                                    <th>Benficiaries</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {Object.entries(beneficiaries).map(row => {return <tr><td key={"ben_" + row[0]}>{row[1]}</td></tr>})}
+                            </tbody>
+                        </table>
+                    </div>
+                }
             </div>
         </div>
     </section>
-
-          
-
-
-
-
-
-
-
-
-
-        
-  
   );
 }
 
