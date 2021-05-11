@@ -20,3 +20,16 @@
 .App-link {
   color: #09d3ac;
 }
+
+table, td, th {
+  width:14%;
+  padding:5px;
+}
+
+.death {
+  color: red;
+}
+
+.alive {
+  color: green;
+}

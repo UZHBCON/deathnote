@@ -149,6 +149,10 @@ contract DeathNote {
 	    deadline = now + (waitingPeriodDays * 1 seconds);
 	}
     }
+
+	function deathIsConfirmed() public view returns (bool) {
+	return numConfirmations == confirmationsRequired;
+	} 
 	
     function claimInheritanceShare() public onlyBeneficiary deathConfirmed shareNotClaimed {
 	// Idea: Every beneficiary needs to claim its share on its own
@@ -246,18 +250,18 @@ contract DeathNote {
     }
 
 	function getAllValidators() public view returns (address[] memory, bool[] memory) {
-        bool[] memory conf_arr = new bool[](trackValidators.length);
-		for (uint i = 0; i < trackValidators.length; i++) {
-			conf_arr[i] = validators[trackValidators[i]].hasConfirmed;
-		}
-		return (trackValidators, conf_arr);
+	bool[] memory conf_arr = new bool[](trackValidators.length);
+	for (uint i = 0; i < trackValidators.length; i++) {
+		conf_arr[i] = validators[trackValidators[i]].hasConfirmed;
+	}
+	return (trackValidators, conf_arr);
     }
 
 	function getAllBeneficiaries() public view returns (address[] memory, uint[] memory) {
-		uint[] memory share_arr = new uint[](trackBeneficiaries.length);
-		for (uint i = 0; i < trackBeneficiaries.length; i++) {
-			share_arr[i]  = beneficiaries[trackBeneficiaries[i]].share;
-		}
-		return (trackBeneficiaries, share_arr);
+	uint[] memory share_arr = new uint[](trackBeneficiaries.length);
+	for (uint i = 0; i < trackBeneficiaries.length; i++) {
+		share_arr[i]  = beneficiaries[trackBeneficiaries[i]].share;
+	}
+	return (trackBeneficiaries, share_arr);
 	}
 }

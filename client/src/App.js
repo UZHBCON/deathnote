@@ -5,7 +5,7 @@ import "./App.css";
 import "./App.sass";
 import logo from './images/logo.png';
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
-import {faHome, faBookDead, faMoneyBillWave, faBan, faExchangeAlt} from '@fortawesome/free-solid-svg-icons';
+import {faHome, faBookDead, faMoneyBillWave, faBan, faUserEdit, faPiggyBank, faSkull, faHeart} from '@fortawesome/free-solid-svg-icons';
 import {faGithub} from '@fortawesome/free-brands-svg-icons';
 import Table from "./components/Table"
 
@@ -23,6 +23,10 @@ function App() {
     const [isBeneficiary, setIsBeneficiary] = useState(false);
     const [isValidator, setIsValidator] = useState(false);
     const [inputAmount, setInputAmount] = useState(0);
+    const [inputAddresses, setInputAddresses] = useState('');
+    const [inputValue, setInputValue] = useState('');
+    const [deathConfirmed, setDeathConfirmed] = useState('false');
+    const [deadline, setDeadline] = useState(0);
 
     useEffect(() => {
       async function setupWeb3() {
@@ -50,6 +54,8 @@ function App() {
           setAddress(instance.options.address);
           setCreator(await instance.methods.creator().call());
           setBalance(await instance.methods.balance().call());
+          setDeathConfirmed(await instance.methods.deathIsConfirmed().call());
+          setDeadline(new Date(await (instance.methods.deadline().call()) * 1000).toString());
           setParticipants(instance);
         } catch (error) {
           // Catch any errors for any of the above operations.
@@ -66,7 +72,9 @@ function App() {
         async function initUser() {
             if (validators != null && beneficiaries != null) {
 
-                console.log(Object.entries(validators))
+
+
+                console.log(deadline)
 
                 // set specific user from account number
                 if (accounts[0] === creator) {
@@ -159,6 +167,29 @@ function App() {
         }
     };
 
+    const replaceValidators = async () => {
+        setIsLoading(true);
+        try {
+            await contract.methods.replaceValidators(inputAddresses.split(','), inputValue).send({from: accounts[0]});
+        } catch (e) {
+            console.error(e)
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const replaceBeneficiaries = async () => {
+        setIsLoading(true);
+        try {
+            await contract.methods.replaceBeneficiaries(inputAddresses.split(','), inputValue).send({from: accounts[0]});
+        } catch (e) {
+            console.error(e)
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+
     if (isLoading) {
         return <h1>Please wait while processing transaction...</h1>
     }
@@ -211,7 +242,16 @@ function App() {
         <div className="container">
                 <h1 className="title">
                     Contract
+                    { deathConfirmed ? (
+                            <FontAwesomeIcon className="death ml-4" icon={faSkull} />
+                        ) : (
+                            <FontAwesomeIcon className="alive ml-4" icon={faHeart} />
+                        )
+                    }
                 </h1>
+                {deathConfirmed &&
+                    <h2 className="subtitle">Deadline: {deadline}</h2> 
+                }
                 <div className="columns is-gapless">
                     <div className="column is-2">
                         <p className="mr-2">Contract Address:</p>
@@ -226,12 +266,13 @@ function App() {
                         <input className="input is-large" style={{width: 400}} type="text" value={creator} disabled></input>
                     </div>
                 </div>
+                { isCreator &&
                 <div className="columns is-gapless">
                     <div className="column is-2">
-                            <p className="mr-2">Amount (Wei):</p>
-                        </div>
-                        <div className="control column">
-                            <input className="input is-large" style={{width: 400}} type="text" value={inputAmount} onChange={e => setInputAmount(e.target.value)}></input>
+                        <p className="">Amount (Wei):</p>
+                    </div>
+                    <div className="control column">
+                        <input className="input is-large" style={{width: 400}} type="text" value={inputAmount} onChange={e => setInputAmount(e.target.value)}></input>
                     </div>
                     <div className="column is-2">
                         <p className="mr-2">Balance (Wei):</p>
@@ -240,65 +281,82 @@ function App() {
                         <input className="input is-large" style={{width: 400}} type="text" value={balance} disabled></input>
                     </div>
                 </div>
+                }
+                {isCreator && !deathConfirmed &&
+                <div className="columns is-gapless">
+                    <div className="column is-2">
+                            <p className="mr-2">Addresses:</p>
+                        </div>
+                        <div className="control column">
+                            <input className="input is-large" style={{width: 400}} type="text" value={inputAddresses} onChange={e => setInputAddresses(e.target.value)}></input>
+                    </div>
+                    <div className="column is-2">
+                        <p className="mr-2">Shares / Confirmations:</p>
+                    </div>
+                    <div className="control column">
+                        <input className="input is-large" style={{width: 400}} type="text" value={inputValue} onChange={e => setInputValue(e.target.value)}></input>
+                    </div>
+                </div>
+                }
                 <div className="controls mb-4">
                     {isCreator &&
                             <div className="controls mb-4">
-                                 <a className="button is-white mr-2" onClick={deposit}>
+                                 <button className="button is-white mr-2" onClick={deposit} disabled={deathConfirmed}>
                                     <span className="icon">
                                         <FontAwesomeIcon icon={faMoneyBillWave} />
                                     </span>
                                     <span>Deposit</span>
-                                </a>
+                                </button>
                                 <a className="button is-white mr-2" onClick={withdraw}>
                                     <span className="icon">
-                                        <FontAwesomeIcon icon={faMoneyBillWave} />
+                                        <FontAwesomeIcon icon={faPiggyBank} />
                                     </span>
                                     <span>Withdraw</span>
                                 </a>
-                                <a className="button is-white mr-2" onClick={revokeTestament}>
+                                <button className="button is-white mr-2" onClick={revokeTestament} disabled={deathConfirmed}>
                                     <span className="icon">
                                         <FontAwesomeIcon icon={faBan} />
                                     </span>
                                     <span>Revoke Contract</span>
-                                </a>
-                                <a className="button is-white mr-2" onClick={revokeTestament}>
+                                </button>
+                                <button className="button is-white mr-2" onClick={replaceValidators} disabled={deathConfirmed}>
                                     <span className="icon">
-                                        <FontAwesomeIcon icon={faExchangeAlt} />
+                                        <FontAwesomeIcon icon={faUserEdit} />
                                     </span>
-                                    <span>Replace Voters</span>
-                                </a>
-                                <a className="button is-white mr-2" onClick={revokeTestament}>
+                                    <span>Replace Validators</span>
+                                </button>
+                                <button className="button is-white mr-2" onClick={replaceBeneficiaries} disabled={deathConfirmed}>
                                     <span className="icon">
-                                        <FontAwesomeIcon icon={faExchangeAlt} />
+                                        <FontAwesomeIcon icon={faUserEdit} />
                                     </span>
                                     <span>Replace Beneficiaries</span>
-                                </a>
+                                </button>
                             </div>
                     }
 
-                    {isValidator && 
-                        <a className="button is-white mr-2" onClick={confirmDeath}>
+                    {isValidator &&
+                        <button className="button is-white mr-2" onClick={confirmDeath} disabled={deathConfirmed}>
                             <span className="icon">
                                 <FontAwesomeIcon icon={faBookDead} />
                             </span>
                             <span>Confirm Death</span>
-                        </a>
+                        </button>
                     }
                     {isBeneficiary &&
-                        <a className="button is-white mr-2" onClick={claimInheritanceShare}>
+                        <button className="button is-white mr-2" onClick={claimInheritanceShare}>
                             <span className="icon">
                                 <FontAwesomeIcon icon={faMoneyBillWave} />
                             </span>
                             <span>Claim Inheritance Share</span>
-                        </a>
+                        </button>
                     }
                 </div>
-                {isCreator && 
+                {isCreator &&
                     <div>
                         <table className="table is-hoverable is-fullwidth">
                             <thead>
                                 <tr>
-                                    <th>Voters</th>
+                                    <th>Validators</th>
                                     <th>Death Confirmed</th>
                                 </tr>
                             </thead>
