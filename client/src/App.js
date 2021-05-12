@@ -247,11 +247,16 @@ function App() {
             <div className="hero-body">
               <div className="container">
                 <h1 className="title">
-                  Contract
                   { deathConfirmed ? (
-                      <FontAwesomeIcon className="death ml-4" icon={faSkull} />
+                      <div style={{display: 'flex'}}>
+                        <div>Dead</div>
+                        <FontAwesomeIcon className="death ml-4" icon={faSkull} />
+                      </div>
                     ) : (
-                      <FontAwesomeIcon className="alive ml-4" icon={faHeart} />
+                        <div style={{display: 'flex'}}>
+                          <div>Alive</div>
+                          <FontAwesomeIcon className="alive ml-4" icon={faHeart} />
+                        </div>
                     )
                   }
                   { testamentRevoked && (
@@ -298,13 +303,13 @@ function App() {
                         <p className="mr-2">Addresses:</p>
                       </div>
                       <div className="control column">
-                        <input className="input is-large" style={{width: 400}} type="text" value={inputAddresses} onChange={e => setInputAddresses(e.target.value)}></input>
+                        <input className="input is-large" placeholder="Address1, Address2, ..." style={{width: 400}} type="text" value={inputAddresses} onChange={e => setInputAddresses(e.target.value)}></input>
                       </div>
                       <div className="column is-2">
                         <p className="mr-2">Shares / Confirmations:</p>
                       </div>
                       <div className="control column">
-                        <input className="input is-large" style={{width: 400}} type="text" value={inputValue} onChange={e => setInputValue(e.target.value)}></input>
+                        <input className="input is-large" placeholder="Share1, Share2, ..." style={{width: 400}} type="text" value={inputValue} onChange={e => setInputValue(e.target.value)}></input>
                       </div>
                     </div>
                     }

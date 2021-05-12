@@ -1,7 +1,16 @@
 {
-  "validators": ["0xD6f3B793b35149571c7f29D3Ff100f880be8E96A"],
-  "beneficiaries" : ["0xD6f3B793b35149571c7f29D3Ff100f880be8E96A"],
-  "shares": [100],
-  "confirmationsRequired": 1,
+  "validators": [
+    "0x90A7afc85d65dE84A730518d05091Db236912094",
+    "0x17eDC562dFf19585fCaebF619D72B53C5Ed61fdF",
+    "0xCD7fCBf5E8eBD8c080b554EeC4cE4C969A9aAabe"
+  ],
+  "beneficiaries" : [
+    "0xD6f3B793b35149571c7f29D3Ff100f880be8E96A",
+    "0xE43Af42Ce778091E933d60d83Fc29384039a54DA",
+    "0xf77F5d21011A8EfB320645a7F01c9491F9dc97C3",
+    "0x4e2f40eF33F1638E3A28206321EEc8ca2f36980E"
+  ],
+  "shares": [10, 10, 50, 30],
+  "confirmationsRequired": 3,
   "waitingPeriodDays": 0
 }
